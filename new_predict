@@ -1,0 +1,56 @@
+# scripts/predict_new_obligation.py
+
+import joblib
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
+# === Load Trained Models and Encoders ===
+clf_nfri = joblib.load("./models/clf_nfri.pkl")
+clf_kpci = joblib.load("./models/clf_kpci.pkl")
+clf_policy = joblib.load("./models/clf_policy.pkl")
+
+mlb_nfri = joblib.load("./models/mlb_nfri.pkl")
+mlb_kpci = joblib.load("./models/mlb_kpci.pkl")
+mlb_policy = joblib.load("./models/mlb_policy.pkl")
+
+# === Load Embedding Model ===
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# === Input New Obligation ===
+title = "Encrypt customer records"
+summary = "Customer financial data must be encrypted and stored securely with regular backups."
+rule_citation = "FINSEC-122"
+jurisdiction = "EU"
+key_designation = "Key Requirement"
+regulation_id = "GDPR"
+cross_border = "Yes"
+gcrs_info = "GCRS-2023"
+risk_taxonomy = "Data Privacy"
+procedure_details = "Encrypt and rotate keys every 90 days."
+reporting = "Monthly risk reports."
+
+# === Combine all fields
+combined_text = (
+    title + " " + summary + " " + rule_citation + " " + jurisdiction + " " +
+    key_designation + " " + regulation_id + " " + cross_border + " " +
+    gcrs_info + " " + risk_taxonomy + " " + procedure_details + " " + reporting
+)
+
+# === Generate embedding
+embedding = model.encode([combined_text])
+
+# === Predict
+pred_nfri = clf_nfri.predict(embedding)
+pred_kpci = clf_kpci.predict(embedding)
+pred_policy = clf_policy.predict(embedding)
+
+# === Decode labels
+decoded_nfri = mlb_nfri.inverse_transform(pred_nfri)[0]
+decoded_kpci = mlb_kpci.inverse_transform(pred_kpci)[0]
+decoded_policy = mlb_policy.inverse_transform(pred_policy)[0]
+
+# === Output
+print("\n🔮 Predicted Labels for New Obligation")
+print("Mapped NFRI:", decoded_nfri)
+print("KPCI ID:", decoded_kpci)
+print("Policy ID:", decoded_policy)
